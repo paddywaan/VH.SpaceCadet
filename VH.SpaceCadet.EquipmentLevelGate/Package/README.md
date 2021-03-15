@@ -5,11 +5,14 @@
 
 
 ## Features
+* Provides A level gate for all equipments which have a skill associated with them
+* Where a skill is not provided for an equipment (armors), the running skill is used.
+* Configurable level gate for all equipment
 
 
 ## Changelog
+* *v1.0.0:* Release.
 
 
-## Known issues
+## Issue Reporting
 
-If you happen to come across any problems or unexpected behaviour, please feel free to contact me on discord, or create an issue on github at:

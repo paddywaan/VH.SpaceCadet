@@ -56,7 +56,7 @@ namespace VH.SpaceCadet.EquipmentLevelGate
                     if (conf.Value > skill.m_level)
                     {
                         self.Message(MessageHud.MessageType.Center, $"Your {type} skill prevents you from equipping the {Localization.instance.Localize(item.m_shared.m_name)}. Min skill required: {conf.Value}");
-                        return false;
+                        return true;
                     }
                     
                 }

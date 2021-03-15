@@ -1,6 +1,6 @@
 {
-  "name": "VH.SpaceCadet.EquipmentLevelGate",
-  "description": "Item Level Gate",
+  "name": "Meaningful Skill Progression",
+  "description": "Gates equipment behind skill levels to encourage progression and enhance the risk of death.",
   "version_number": "1.0.2",
   "website_url": "",
   "dependencies": [
