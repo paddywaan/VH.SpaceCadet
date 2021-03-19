@@ -10,7 +10,7 @@ namespace VH.SpaceCadet.EquipmentLevelGate
 {
     public static class Hooks
     {
-        private static Dictionary<string, ItemDrop> itemLookup = new Dictionary<string, ItemDrop>();
+        private readonly static Dictionary<string, ItemDrop> itemLookup = new Dictionary<string, ItemDrop>();
         internal static void Init()
         {
             On.Humanoid.EquipItem += Humanoid_EquipItem;
@@ -20,32 +20,37 @@ namespace VH.SpaceCadet.EquipmentLevelGate
 
         private static bool Humanoid_EquipItem(On.Humanoid.orig_EquipItem orig, Humanoid self, ItemDrop.ItemData item, bool triggerEquipEffects)
         {
-            if (item.m_equiped) return orig(self, item, triggerEquipEffects);
-            BepInEx.Configuration.ConfigEntry<int> conf = null;
-            foreach (var i in Config.GeneralSettings.Keys)
+            try
             {
-                if (i.Key.Equals(itemLookup[item.m_shared.m_name].name))
+                if (!self.IsPlayer() || item.m_equiped) return orig(self, item, triggerEquipEffects);
+                BepInEx.Configuration.ConfigEntry<int> conf = null;
+                foreach (var i in Config.GeneralSettings.Keys)
                 {
-                    Config.GeneralSettings.TryGetEntry(i, out conf);
-                }
-
-            }
-            if (conf != null)
-            {
-                Skills.SkillType type;
-                if (Enum.TryParse<Skills.SkillType>(conf.Definition.Section, out type))
-                {
-                    var skill = self.GetSkills().m_skillData[type];
-                    Main.log.LogDebug($"Found LevelGate of {conf.Value} for {itemLookup[item.m_shared.m_name].name} checked against player's {type} level: {skill.m_level}");
-                    if (conf.Value > skill.m_level)
+                    if (itemLookup.ContainsKey(item.m_shared.m_name) && i.Key.Equals(itemLookup[item.m_shared.m_name].name))
                     {
-                        self.Message(MessageHud.MessageType.Center, $"Your {type} skill prevents you from equipping the {Localization.instance.Localize(item.m_shared.m_name)}. Min skill required: {conf.Value}");
-                        return true;
+                        Config.GeneralSettings.TryGetEntry(i, out conf);
                     }
-
                 }
+                if (conf != null)
+                {
+                    if (Enum.TryParse<Skills.SkillType>(conf.Definition.Section, out Skills.SkillType type))
+                    {
+                        var skill = self.GetSkills().m_skillData[type];
+                        Main.log.LogDebug($"Found LevelGate of {conf.Value} for {itemLookup[item.m_shared.m_name].name} checked against player's {type} level: {skill.m_level}");
+                        if (conf.Value > skill.m_level)
+                        {
+                            self.Message(MessageHud.MessageType.Center, $"Your {type} skill prevents you from equipping the {Localization.instance.Localize(item.m_shared.m_name)}. Min skill required: {conf.Value}");
+                            return true;
+                        }
+
+                    }
+                }
+                return orig(self, item, triggerEquipEffects);
+            } catch (Exception ex)
+            {
+                Main.log.LogError(ex);
+                return orig(self, item, triggerEquipEffects);
             }
-            return orig(self, item, triggerEquipEffects);
         }
 
         private static void FejdStartup_Start(On.FejdStartup.orig_Start orig, FejdStartup self)
@@ -57,10 +62,8 @@ namespace VH.SpaceCadet.EquipmentLevelGate
                 if (iDrop.m_itemData.IsEquipable() && iDrop.m_itemData.m_shared.m_name.Contains("$item"))
                 {
                     itemLookup[iDrop.m_itemData.m_shared.m_name] = iDrop;
-                    //Main.log.LogDebug($"{i.name},{idata.name},{idata.m_itemData.m_shared.m_name},{idata.m_itemData.m_shared.m_itemType},{idata.m_itemData.m_shared.m_skillType}");
-                    //Main.log.LogDebug($"comparing {iDrop.m_itemData.m_shared.m_skillType} to {i.name}");
-                    if (iDrop.m_itemData.m_shared.m_skillType == Skills.SkillType.Swords && !i.name.Contains($"Sword")) Config.GeneralSettings.Bind<int>($"{Skills.SkillType.Run}", $"{i.name}", 0, "The minimum level which is required to equip the item.");
-                    else Config.GeneralSettings.Bind<int>($"{iDrop.m_itemData.m_shared.m_skillType}", $"{i.name}", 0, "The minimum level which is required to equip the item.");
+                    var isSwordNotContainsSword = iDrop.m_itemData.m_shared.m_skillType == Skills.SkillType.Swords && !i.name.Contains($"Sword"); //Filter out non swords (armors) from the default type (sword)
+                    Config.GeneralSettings.Bind<int>($"{(isSwordNotContainsSword ? Skills.SkillType.Run : iDrop.m_itemData.m_shared.m_skillType)}", $"{i.name}", 0, "The minimum level which is required to equip the item.");
                 }
             }
         }
